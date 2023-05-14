@@ -85,7 +85,7 @@ async function getAllMarketIDs(): Promise<Result<number[], Error>> {
     return Ok(results);
 }
 
-async function fillMarketIDs(IDs: number[]) {
+async function fillMarketIDs(IDs: number[]): Promise<Result<undefined, Error>> {
     for (const ID of IDs) {
         const respMarketData = await fetch(`https://esi.evetech.net/latest/markets/${Jita_Region_ID}/orders/?datasource=tranquility&order_type=all&page=1&type_id=${ID}`)
         if (!respMarketData.ok) return Err(new Error(`Failure when querying Item Order for ${ID}`))
@@ -96,7 +96,6 @@ async function fillMarketIDs(IDs: number[]) {
         if (lowest.err) continue;
         let expiry;
         let rawExpiry = respMarketData.headers.get("expires")
-        let eTag;
         let rawETag = respMarketData.headers.get("etag")
         if (typeof rawETag != "string") continue;
         if (typeof rawExpiry == "string") expiry = new Date(Date.parse(rawExpiry))
@@ -106,6 +105,7 @@ async function fillMarketIDs(IDs: number[]) {
             cacheExpiry: expiry
         })
     }
+    return Ok(undefined);
 };
 
 function findHighestBuy(orders: any[]): Result<number, Error> {
