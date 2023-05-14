@@ -8,16 +8,16 @@ datasource db {
 }
 
 model config {
-  key   String @id @unique
+  key   String @unique
   value String
 }
 
 model marketTypes {
-  typeID  Int @id @unique
-  groupID Int
+  typeID      Int      @id @unique
+  eTag        String
+  cacheExpiry DateTime
 
   @@index([typeID])
-  @@index([groupID])
 }
 
 model marketPrice {
