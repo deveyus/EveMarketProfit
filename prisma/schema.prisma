@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model config {
+  key   String @id @unique
+  value String
+}
+
+model marketTypes {
+  typeID  Int @id @unique
+  groupID Int
+
+  @@index([typeID])
+  @@index([groupID])
+}
+
+model marketPrice {
+  typeID Int @id @unique
+  price  Int
+
+  @@index([typeID])
+}
+
+model marketHistory {
+  typeID     Int      @id
+  date       DateTime
+  average    Int
+  highest    Int
+  lowest     Int
+  orderCount Int
+  volume     Int
+
+  @@index([typeID])
+}
