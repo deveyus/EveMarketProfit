@@ -63,13 +63,13 @@ async function getAllMarketIDs(): Promise<Result<void, Error>> {
     if (!respMarketGroups.ok) return Err(new Error(`There was an error with the request to Market Groups: ${respMarketGroups.statusText}` ))
 
     const marketGroups = await respMarketGroups.json()
-    marketGroups.forEach(async (group: any) => {
+    for await (const group of marketGroups) {
         const respMarketTypes = await fetch(`https://esi.evetech.net/latest/markets/groups/${group}/?datasource=tranquility&language=en`)
 
         if (!respMarketTypes.ok) return Err(new Error("There was an error with the request to Market Types"))
 
         const marketType = await respMarketTypes.json()
-        if (marketType.types.length < 1) return;
+        if (marketType.types.length < 1) continue;
 
         for (const item of marketType.types) {
             if (typeof item != "number") continue;
@@ -77,8 +77,7 @@ async function getAllMarketIDs(): Promise<Result<void, Error>> {
             console.log(`Adding: TypeID: ${item}, groupID: ${group}}`)
             await DBfillMarketTypes({id: item, group: group})
         }
-        return;
-    })
+    }
     return Ok.EMPTY;
 }
 //     });
