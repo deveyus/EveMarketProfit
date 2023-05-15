@@ -13,28 +13,33 @@ model config {
 }
 
 model marketTypes {
-  typeID      Int      @id @unique
-  eTag        String
-  cacheExpiry DateTime
+  typeID  Int @id @unique
+  groupID Int
 
   @@index([typeID])
 }
 
 model marketPrice {
-  typeID Int @id @unique
-  price  Int
+  typeID      Int      @id @unique
+  price       Int
+  eTag        String
+  cacheExpiry DateTime
 
+  @@index([cacheExpiry])
   @@index([typeID])
 }
 
 model marketHistory {
-  typeID     Int      @id
-  date       DateTime
-  average    Int
-  highest    Int
-  lowest     Int
-  orderCount Int
-  volume     Int
+  typeID      Int      @id
+  date        DateTime
+  average     Int
+  highest     Int
+  lowest      Int
+  orderCount  Int
+  volume      Int
+  eTag        String
+  cacheExpiry DateTime
 
+  @@index([cacheExpiry])
   @@index([typeID])
 }

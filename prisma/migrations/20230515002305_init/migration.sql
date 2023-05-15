@@ -7,15 +7,15 @@ CREATE TABLE "config" (
 -- CreateTable
 CREATE TABLE "marketTypes" (
     "typeID" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "groupID" INTEGER NOT NULL,
-    "eTag" TEXT NOT NULL,
-    "cacheExpiry" DATETIME NOT NULL
+    "groupID" INTEGER NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "marketPrice" (
     "typeID" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "price" INTEGER NOT NULL
+    "price" INTEGER NOT NULL,
+    "eTag" TEXT NOT NULL,
+    "cacheExpiry" DATETIME NOT NULL
 );
 
 -- CreateTable
@@ -26,7 +26,9 @@ CREATE TABLE "marketHistory" (
     "highest" INTEGER NOT NULL,
     "lowest" INTEGER NOT NULL,
     "orderCount" INTEGER NOT NULL,
-    "volume" INTEGER NOT NULL
+    "volume" INTEGER NOT NULL,
+    "eTag" TEXT NOT NULL,
+    "cacheExpiry" DATETIME NOT NULL
 );
 
 -- CreateIndex
@@ -39,13 +41,16 @@ CREATE UNIQUE INDEX "marketTypes_typeID_key" ON "marketTypes"("typeID");
 CREATE INDEX "marketTypes_typeID_idx" ON "marketTypes"("typeID");
 
 -- CreateIndex
-CREATE INDEX "marketTypes_groupID_idx" ON "marketTypes"("groupID");
-
--- CreateIndex
 CREATE UNIQUE INDEX "marketPrice_typeID_key" ON "marketPrice"("typeID");
 
 -- CreateIndex
+CREATE INDEX "marketPrice_cacheExpiry_idx" ON "marketPrice"("cacheExpiry");
+
+-- CreateIndex
 CREATE INDEX "marketPrice_typeID_idx" ON "marketPrice"("typeID");
+
+-- CreateIndex
+CREATE INDEX "marketHistory_cacheExpiry_idx" ON "marketHistory"("cacheExpiry");
 
 -- CreateIndex
 CREATE INDEX "marketHistory_typeID_idx" ON "marketHistory"("typeID");

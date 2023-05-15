@@ -2,7 +2,13 @@ import pkg, { Result } from 'ts-results';
 const { Err, Ok } = pkg;
 import { PrismaClient, config, marketTypes } from "@prisma/client";
 import chalk from "chalk";
-const Jita_Region_ID = 10000002;
+
+
+
+// I'll need this later
+// const Jita_Region_ID = 10000002;
+// const respMarketData = await fetch(`https://esi.evetech.net/latest/markets/${Jita_Region_ID}/orders/?datasource=tranquility&order_type=all&page=1&type_id=${item.id}`)
+
 const prisma = new PrismaClient();
 
 async function DBaddConfig(): Promise<config> {
@@ -15,19 +21,18 @@ async function DBaddConfig(): Promise<config> {
     return config;
 }
 
-async function DBfillMarketTypes(data: { typeID: number; eTag: string; cacheExpiry: any; }): Promise<Result<marketTypes, unknown>> {
+async function DBfillMarketTypes(data: IItemAndGroup): Promise<Result<marketTypes, unknown>> {
     try {
         const marketTypes = await prisma.marketTypes.upsert({
             where: {
-                typeID: data.typeID,
+                typeID: data.id
             },
             update: {
 
             },
             create: {
-                typeID: data.typeID,
-                eTag: data.eTag,
-                cacheExpiry: data.cacheExpiry
+                typeID: data.id,
+                groupID: data.group
             }
         })
         return Ok(marketTypes);
@@ -35,19 +40,6 @@ async function DBfillMarketTypes(data: { typeID: number; eTag: string; cacheExpi
         return Err(e);
     }
 }
-// async function DBgetMarketTypes(): Promise<marketTypes[]> {
-//     const marketTypes = await prisma.marketTypes.findMany();
-//     return marketTypes;
-// }
-// DBaddConfig()
-//     .then(async () => {
-//         await prisma.$disconnect()
-//     })
-//     .catch(async (error) => {
-//         console.log(error)
-//         await prisma.$disconnect()
-//         process.exit()
-//     })
 
 async function addConfig(): Promise<Result<config, unknown>> {
     try {
@@ -60,76 +52,58 @@ async function addConfig(): Promise<Result<config, unknown>> {
     }
 }
 
+interface IItemAndGroup {
+    id: number,
+    group: number
+}
 
-async function getAllMarketIDs(): Promise<Result<number[], Error>> {
-    let results = [];
-    const url = "https://esi.evetech.net/latest/markets/groups/?datasource=tranquility";
-    const respMarketGroups = await fetch(url)
-    let marketGroups;
-    if (!respMarketGroups.ok) return Err(new Error("There was an error with the request to Market Groups"))
+async function getAllMarketIDs(): Promise<Result<void, Error>> {
+    const respMarketGroups = await fetch(`https://esi.evetech.net/latest/markets/groups/?datasource=tranquility`)
 
-    marketGroups = await respMarketGroups.json()
-    for (const group of marketGroups) {
+    if (!respMarketGroups.ok) return Err(new Error(`There was an error with the request to Market Groups: ${respMarketGroups.statusText}` ))
+
+    const marketGroups = await respMarketGroups.json()
+    marketGroups.forEach(async (group: any) => {
         const respMarketTypes = await fetch(`https://esi.evetech.net/latest/markets/groups/${group}/?datasource=tranquility&language=en`)
 
         if (!respMarketTypes.ok) return Err(new Error("There was an error with the request to Market Types"))
 
         const marketType = await respMarketTypes.json()
-        if (marketType.types.length < 1) continue;
+        if (marketType.types.length < 1) return;
 
-        results.push(...marketType.types)
-        console.log(marketType.types);
-        // const dbResult = DBUpdateMarketTypes(group, marketType)
-
-    }
-    return Ok(results);
+        for (const item of marketType.types) {
+            if (typeof item != "number") continue;
+            if (typeof group != "number") continue;
+            console.log(`Adding: TypeID: ${item}, groupID: ${group}}`)
+            await DBfillMarketTypes({id: item, group: group})
+        }
+        return;
+    })
+    return Ok.EMPTY;
 }
+//     });
+//     for await (const group of marketGroups) {
+//         const respMarketTypes = await fetch(`https://esi.evetech.net/latest/markets/groups/${group}/?datasource=tranquility&language=en`)
 
-async function fillMarketIDs(IDs: number[]): Promise<Result<undefined, Error>> {
-    for (const ID of IDs) {
-        const respMarketData = await fetch(`https://esi.evetech.net/latest/markets/${Jita_Region_ID}/orders/?datasource=tranquility&order_type=all&page=1&type_id=${ID}`)
-        if (!respMarketData.ok) return Err(new Error(`Failure when querying Item Order for ${ID}`))
-        const orders = await respMarketData.json();
-        const highest = findHighestBuy(orders)
-        if (highest.err) continue;
-        const lowest = findLowestSell(orders);
-        if (lowest.err) continue;
-        let expiry;
-        let rawExpiry = respMarketData.headers.get("expires")
-        let rawETag = respMarketData.headers.get("etag")
-        if (typeof rawETag != "string") continue;
-        if (typeof rawExpiry == "string") expiry = new Date(Date.parse(rawExpiry))
-        DBfillMarketTypes({
-            typeID: ID,
-            eTag: rawETag,
-            cacheExpiry: expiry
-        })
-    }
-    return Ok(undefined);
-};
+//         if (!respMarketTypes.ok) return Err(new Error("There was an error with the request to Market Types"))
 
-function findHighestBuy(orders: any[]): Result<number, Error> {
-    let highest = 0;
-    for (const order of orders) {
-        if (order.is_buy_order && order.price > highest) highest = order.price;
-    }
+//         const marketType = await respMarketTypes.json()
+//         if (marketType.types.length < 1) continue;
 
-    if (highest == 0) return Err(new Error("No Buy Orders"));
-    return Ok(highest);
-}
+//         for (const item of marketType.types) {
+//             if (typeof item != "number") continue;
+//             if (typeof group != "number") continue;
+//             console.log(`Adding: TypeID: ${item}, groupID: ${group}}`)
+//             await DBfillMarketTypes({id: item, group: group})
+//         }
 
-function findLowestSell(orders: any[]): Result<number, Error> {
-    let lowest = Number.MAX_SAFE_INTEGER;
-    for (const order of orders) {
-        if (!order.is_buy_order && order.price < lowest) lowest = order.price;
-    }
+//     }
+    // return Ok.EMPTY;
+// }
 
-    if (lowest == Number.MAX_SAFE_INTEGER) return Err(new Error("No Sell Orders"));
-    return Ok(lowest);
-}
 
 const res = await getAllMarketIDs();
-if (res.ok) fillMarketIDs(res.val);
+console.log(res)
 
 const addConfigResult = await addConfig();
 console.log(chalk.blue(`Result of Adding a Config: ${addConfigResult.val}`));
